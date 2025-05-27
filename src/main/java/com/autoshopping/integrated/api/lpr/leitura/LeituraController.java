@@ -1,15 +1,14 @@
 package com.autoshopping.integrated.api.lpr.leitura;
 
+import com.autoshopping.integrated.api.lpr.message.MensagemController;
 import com.autoshopping.integrated.api.lpr.registro.Registro;
 import com.autoshopping.integrated.api.lpr.registro.RegistroRepository;
-import com.autoshopping.integrated.api.lpr.registro.RegistroService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.*;
 
 @RestController
@@ -21,6 +20,11 @@ public class LeituraController {
 
     @Autowired
     private RegistroRepository registroRepository;
+
+    private final MensagemController mensagemController;
+    public LeituraController(MensagemController mensagemController){
+        this.mensagemController = mensagemController;
+    }
 
 
     @PostMapping("/")
@@ -46,10 +50,13 @@ public class LeituraController {
 
             //Mensagem que será enviada ao frontend
             String mensagem;
+
             if (!placaCadastrada) {
                 String deviceName = root.path("AlarmInfoPlate").path("deviceName").asText();
                 mensagem = "Veículo de placa " + placa + " não cadastrada se encontra na cancela de " +deviceName+ ". Acesso negado";
+                mensagemController.enviarMensagemParaFrontend(mensagem);
                 System.out.println(mensagem);
+
             } else {
 
 
@@ -57,6 +64,7 @@ public class LeituraController {
                 String deviceName = root.path("AlarmInfoPlate").path("deviceName").asText(); // extraindo o nome da câmera
 
                 mensagem = "Veículo de placa " + placa + " cadastrada. Acesso liberado";
+
                 System.out.println(mensagem);
 
 
@@ -68,6 +76,7 @@ public class LeituraController {
                 registroRepository.save(registro);
 
                 mensagem = "Veículo placa " + placa + " passou pela cancela de " + deviceName + ".";
+
                 System.out.println(mensagem);
             }
 
@@ -75,31 +84,47 @@ public class LeituraController {
             String comandoSerial = placaCadastrada ? "ABRIR123" : "NEGADO123";
             String base64Data = Base64.getEncoder().encodeToString(comandoSerial.getBytes());
 
+            if (comandoSerial == "ABRIR123"){
+            Map<String, Object> canal1 = new HashMap<>();
+            canal1.put("serialChannel", 0);
+            canal1.put("data", base64Data);
+            canal1.put("dataLen", comandoSerial.length());
+
+            Map<String, Object> canal2 = new HashMap<>();
+            canal2.put("serialChannel", 1);
+            canal2.put("data", base64Data);
+            canal2.put("dataLen", comandoSerial.length());
+
+
+            //Montando a estrutura do JSON que a camera espera:
             // Formatando o JSON que sera enviado para a camera via midleware
-            Map<String, Object> resposta = new HashMap<>();
-            Map<String, Object> body = new HashMap<>();
-            body.put("status", placaCadastrada ? "success" : "fail");
+            Map<String, Object> resposta = new LinkedHashMap<>();
+            Map<String, Object> body = new LinkedHashMap<>();
             body.put("info", "ok");
             body.put("content", "retransfer_stop");
             body.put("is_pay", "true");
+            body.put("serialData", Arrays.asList(canal1, canal2));
 
-            //Mensagem que será capturada pelo o front end
-            body.put("mensagem", mensagem);
-
-            Map<String, Object> canal = new HashMap<>();
-            canal.put("serialChannel", 1);
-            canal.put("data", base64Data);
-            canal.put("dataLen", comandoSerial.length());
-
-            body.put("serialData", Collections.singletonList(canal));
             resposta.put("Response_AlarmInfoPlate", body);
 
+            // Para fins de debug (exibe JSON de forma legível no console)
+            ObjectMapper debugMapper = new ObjectMapper();
+            System.out.println("JSON ENVIADO PARA CÂMERA:");
+            System.out.println(debugMapper.writerWithDefaultPrettyPrinter().writeValueAsString(resposta));
+
             return ResponseEntity.ok(resposta);
+        }
+
+
         } catch (Exception e) {
             System.err.println("Erro ao processar o evento: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Collections.singletonMap("error", "Erro interno ao processar o evento"));
         }
+
+        return null;
     }
+
+
 
 
 }
