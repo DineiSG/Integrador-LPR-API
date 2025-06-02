@@ -18,9 +18,9 @@ public class RegistroService {
         //Buscando todos os registros de acesso
         public Iterable <Registro> getRegistro(){return registroRepository.findAll();}
 
-        public Optional<Registro> getRegistroByPlaca(String placa){return registroRepository.getRegistroByPlaca(placa);}
-
         public Registro insert(Registro registro) {return registroRepository.save(registro);}
+
+        public Iterable <Registro> getAcessosByPlaca(String placa){return  registroRepository.getAcessosByPlaca(placa);};
 
 
 

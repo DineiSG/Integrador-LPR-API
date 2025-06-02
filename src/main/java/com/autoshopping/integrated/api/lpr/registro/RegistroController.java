@@ -19,12 +19,8 @@ public class RegistroController {
     public ResponseEntity<Iterable<Registro>> get(){return ResponseEntity.ok (service.getRegistro()); }
 
     @GetMapping("/placa/{placa}")
-    public ResponseEntity getRegistroByPlaca(@PathVariable ("placa") String placa){
-        Optional <Registro> acessos=service.getRegistroByPlaca(placa);
-        return acessos
-                .map(Registro -> ResponseEntity.ok(acessos))
-                .orElse(ResponseEntity.notFound().build());
-
+    public Iterable<Registro>getAcessosByPlaca(@PathVariable ("placa") String placa){
+        return service.getAcessosByPlaca(placa);
     }
 
     @PostMapping

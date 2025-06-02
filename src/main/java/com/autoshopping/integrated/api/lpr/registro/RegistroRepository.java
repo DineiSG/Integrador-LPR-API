@@ -9,5 +9,6 @@ import java.util.Optional;
 
 public interface RegistroRepository extends JpaRepository<Registro, Integer> {
 
-    Optional<Registro> getRegistroByPlaca(String placa);
+
+    Iterable<Registro> getAcessosByPlaca(String placa);
 }
